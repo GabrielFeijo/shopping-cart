@@ -1,55 +1,77 @@
-import { items } from "../utils/items.js";
-import calculateSubTotal from "./item.service.js";
+import { items } from '../utils/items.js';
+import calculateSubTotal from './item.service.js';
+
+// Function to update the cart total
+const updateCartTotal = (cart) => {
+	cart.total = cart.items
+		.reduce((acc, item) => acc + Number(item.subtotal), 0)
+		.toFixed(2);
+};
 
 const addItemToCart = (id, quantity, cart) => {
-  const item = items.find((item) => item.id === id);
+	const item = items.find((item) => item.id === id);
 
-  if (!item) {
-    throw Error("Product not found!");
-  }
+	if (!item) {
+		throw new Error('Product not found!');
+	}
 
-  const itemWSubTotal = calculateSubTotal({ ...item, quantity });
+	const existingCartItemIndex = cart.items.findIndex(
+		(cartItem) => cartItem.id === id
+	);
 
-  cart.items.push(itemWSubTotal);
+	if (existingCartItemIndex !== -1) {
+		const existingCartItem = cart.items[existingCartItemIndex];
+		const updatedQuantity = existingCartItem.quantity + quantity;
+		cart.items[existingCartItemIndex] = calculateSubTotal({
+			...existingCartItem,
+			quantity: updatedQuantity,
+		});
+	} else {
+		const itemWithSubTotal = calculateSubTotal({ ...item, quantity });
+		cart.items.push(itemWithSubTotal);
+	}
 
-  const cartTotal = cart.items.reduce((acc, item) => {
-    return acc + Number(item.subtotal);
-  }, 0);
+	updateCartTotal(cart);
 
-  cart.total = cartTotal.toFixed(2);
-
-  console.log(`Produto adicionado ao carrinho: `, item);
-
-  console.log("\n", cart);
+	return 'Product added to cart';
 };
 
-const deleteItemCart = (id, cart) => {
-  const item = cart.items.find((item) => item.id === id);
+const deleteItemFromCart = (id, cart) => {
+	const itemIndex = cart.items.findIndex((item) => item.id === id);
 
-  if (!item) {
-    throw Error("Product not found!");
-  }
+	if (itemIndex === -1) {
+		throw new Error('Product not found!');
+	}
 
-  cart.items.pop(item);
-  console.log(`Produto deletado do carrinho: `, item);
+	const removedItem = cart.items.splice(itemIndex, 1)[0];
+	updateCartTotal(cart);
+
+	return `Product removed from cart: ${removedItem.name}`;
 };
 
-const removeItens = (id, quantity, cart) => {
-  const item = cart.items.find((item) => item.id === id);
+const removeItems = (id, quantity, cart) => {
+	const itemIndex = cart.items.findIndex((item) => item.id === id);
 
-  if (!item) {
-    throw Error(`Product not found!`);
-  }
+	if (itemIndex === -1) {
+		throw new Error('Product not found!');
+	}
 
-  if (quantity > item.quantity) {
-    throw Error(`Quantidade inválida `);
-  }
+	const item = cart.items[itemIndex];
 
-  const newItem = { ...item, quantity: item.quantity - quantity };
+	if (quantity > item.quantity) {
+		throw new Error('Invalid quantity');
+	}
 
-  cart.items.pop(item);
-  cart.items.push(newItem);
-  console.log(`Quantidade alterada!`, newItem);
+	const newItem = { ...item, quantity: item.quantity - quantity };
+	cart.items.splice(itemIndex, 1);
+
+	if (newItem.quantity > 0) {
+		const updatedItemWithSubTotal = calculateSubTotal(newItem);
+		cart.items.push(updatedItemWithSubTotal);
+	}
+
+	updateCartTotal(cart);
+	return `Quantity updated for item: ${newItem.name}`;
 };
 
-export { addItemToCart, deleteItemCart, removeItens };
+export { addItemToCart, deleteItemFromCart, removeItems };
